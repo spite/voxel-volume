@@ -33,7 +33,7 @@ renderer.setClearColor(0, 0);
 document.body.append(renderer.domElement);
 
 const scene = new Scene();
-const camera = new PerspectiveCamera(75, 1, 0.1, 10);
+const camera = new PerspectiveCamera(75, 1, 0.1, 100);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.screenSpacePanning = true;
@@ -112,12 +112,7 @@ void main(){
       //color.rgb = .5 + .5 * (val.gba);
       color.a = 1.;
       vec4 depth = (projectionMatrix * modelViewMatrix * vec4(p , 1.));
-      float d = depth.z/depth.w;
-      float far = 1.;
-      float near = 0.;
-      gl_FragDepth =  (((far-near) * d) + near + far) / 2.0;
-//      gl_FragDepth =  (1.0 - 0.0) * 0.5 * d + (1.0 + 0.0) * 0.5;;
-
+      gl_FragDepth = ((depth.z/depth.w)+1.)/2.;
       break;
       //color.rgb += val /1.;
       //color.a = 1.;
@@ -133,7 +128,7 @@ void main(){
   if(color.a == 0.) {
     discard;
   }
-  
+
   //color.rgb = vec3(gl_FragDepth);
   // color = vec4(.5 + .5 * rayDir, 1.);
   // color = vec4(bounds.y - bounds.x, 0. ,0., 1.);
@@ -237,10 +232,8 @@ async function init() {
   const texture = new DataTexture3D(data, width, height, depth);
   texture.format = RedFormat;
   texture.type = FloatType;
-  texture.minFilter = LinearMipMapLinearFilter;
+  texture.minFilter = LinearFilter;
   texture.magFilter = LinearFilter;
-  texture.generateMipmaps = true;
-  // texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
   const geo = new BoxBufferGeometry(1, 1, 1);
   const mat = new RawShaderMaterial({
@@ -250,10 +243,6 @@ async function init() {
     },
     vertexShader,
     fragmentShader,
-    //depthTest: false,
-    // depthWrite: false,
-    //transparent: true,
-    //side: DoubleSide,
   });
   for (let i = 0; i < 100; i++) {
     mesh = new Mesh(geo, mat);
@@ -263,6 +252,7 @@ async function init() {
     mesh.rotation.x = Math.random() * Math.PI * 2;
     mesh.rotation.y = Math.random() * Math.PI * 2;
     mesh.rotation.z = Math.random() * Math.PI * 2;
+    mesh.scale.setScalar( Math.random() + 0.5 );
     scene.add(mesh);
 
     const bbox = new Mesh(
