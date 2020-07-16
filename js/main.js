@@ -33,7 +33,7 @@ renderer.setClearColor(0, 0);
 document.body.append(renderer.domElement);
 
 const scene = new Scene();
-const camera = new PerspectiveCamera(75, 1, 0.1, 100);
+const camera = new PerspectiveCamera(75, 1, 0.1, 10);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.screenSpacePanning = true;
@@ -111,20 +111,30 @@ void main(){
       color.rgb = .5+p;
       //color.rgb = .5 + .5 * (val.gba);
       color.a = 1.;
-      // vec4 depth = (projectionMatrix * modelViewMatrix * vec4(p, 1.));
-      // gl_FragDepth = depth.z;
+      vec4 depth = (projectionMatrix * modelViewMatrix * vec4(p , 1.));
+      float d = depth.z/depth.w;
+      float far = 1.;
+      float near = 0.;
+      gl_FragDepth =  (((far-near) * d) + near + far) / 2.0;
+//      gl_FragDepth =  (1.0 - 0.0) * 0.5 * d + (1.0 + 0.0) * 0.5;;
+
       break;
       //color.rgb += val /1.;
       //color.a = 1.;
     }
 
-		if (color.a >= 0.95) {
+      if (color.a >= 0.95) {
 			break;
 		}
 
     p += rayDir * delta;
   }
 
+  if(color.a == 0.) {
+    discard;
+  }
+  
+  //color.rgb = vec3(gl_FragDepth);
   // color = vec4(.5 + .5 * rayDir, 1.);
   // color = vec4(bounds.y - bounds.x, 0. ,0., 1.);
   // color = vec4(p, 1.);
@@ -152,7 +162,7 @@ let mesh;
 function generatePerlin() {
   const data = new Float32Array(width * height * depth);
   let ptr = 0;
-  const s = 0.1;
+  const s = 0.05;
   const ox = Math.random();
   const oy = Math.random();
   const oz = Math.random();
@@ -178,9 +188,34 @@ function generatePerlin() {
   return data;
 }
 
+function generateSphere() {
+  const data = new Float32Array(width * height * depth);
+  let ptr = 0;
+
+  const v = new Vector3();
+  const c = new Vector3(width, height, depth).multiplyScalar(0.5);
+  for (let z = 0; z < depth; z++) {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        v.set(x, y, z);
+        v.sub(c);
+        const d = v.length();
+        if (d > 0.5 * width) {
+          data[ptr] = 0;
+        } else {
+          data[ptr] = 1;
+        }
+        ptr++;
+      }
+    }
+  }
+  return data;
+}
+
 async function init() {
-  // const data = await voxelise(64);
-  const data = generatePerlin();
+  //const data = await voxelise(64);
+  //const data = generatePerlin();
+  const data = generateSphere();
 
   // let ptr = 0;
   // const normMat = new MeshNormalMaterial();
@@ -199,12 +234,6 @@ async function init() {
   //   }
   // }
 
-  const bbox = new Mesh(
-    new BoxBufferGeometry(1, 1, 1),
-    new MeshNormalMaterial({ wireframe: true })
-  );
-  scene.add(bbox);
-
   const texture = new DataTexture3D(data, width, height, depth);
   texture.format = RedFormat;
   texture.type = FloatType;
@@ -221,12 +250,12 @@ async function init() {
     },
     vertexShader,
     fragmentShader,
-    // depthTest: false,
+    //depthTest: false,
     // depthWrite: false,
-    transparent: true,
+    //transparent: true,
     //side: DoubleSide,
   });
-  for ( let i = 0; i < 100; i ++ ) {
+  for (let i = 0; i < 100; i++) {
     mesh = new Mesh(geo, mat);
     mesh.position.x = Math.random() * 4 - 2;
     mesh.position.y = Math.random() * 4 - 2;
@@ -235,6 +264,14 @@ async function init() {
     mesh.rotation.y = Math.random() * Math.PI * 2;
     mesh.rotation.z = Math.random() * Math.PI * 2;
     scene.add(mesh);
+
+    const bbox = new Mesh(
+      new BoxBufferGeometry(1, 1, 1),
+      new MeshNormalMaterial({ wireframe: true })
+    );
+    bbox.position.copy(mesh.position);
+    bbox.rotation.copy(mesh.rotation);
+    //scene.add(bbox);
   }
 
   camera.position.set(3, 3, 3);
@@ -259,8 +296,7 @@ const invCamera = new Matrix4();
 function render() {
   requestAnimationFrame(render);
 
-  mesh.material.uniforms.cameraPos.value
-    .copy(camera.position);
+  mesh.material.uniforms.cameraPos.value.copy(camera.position);
 
   renderer.render(scene, camera);
 }
