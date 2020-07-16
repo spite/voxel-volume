@@ -64,6 +64,9 @@ const fragmentShader = `#version 300 es
 precision highp float;
 precision highp sampler3D;
 
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+
 in vec3 vPosition;
 in vec3 vOrigin;
 in vec3 vDirection;
@@ -108,6 +111,8 @@ void main(){
       color.rgb = .5+p;
       //color.rgb = .5 + .5 * (val.gba);
       color.a = 1.;
+      // vec4 depth = (projectionMatrix * modelViewMatrix * vec4(p, 1.));
+      // gl_FragDepth = depth.z;
       break;
       //color.rgb += val /1.;
       //color.a = 1.;
@@ -216,12 +221,12 @@ async function init() {
     },
     vertexShader,
     fragmentShader,
-    depthTest: false,
-    depthWrite: false,
+    // depthTest: false,
+    // depthWrite: false,
     transparent: true,
     //side: DoubleSide,
   });
-  for ( let i = 0; i < 10; i ++ ) {
+  for ( let i = 0; i < 100; i ++ ) {
     mesh = new Mesh(geo, mat);
     mesh.position.x = Math.random() * 4 - 2;
     mesh.position.y = Math.random() * 4 - 2;
