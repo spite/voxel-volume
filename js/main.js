@@ -46,8 +46,6 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform vec3 cameraPos;
 
-uniform vec3 eyePosition;
-
 out vec3 vPosition;
 out vec3 vOrigin;
 out vec3 vDirection;
@@ -57,8 +55,8 @@ void main() {
   vec4 worldPosition = modelViewMatrix * vec4(position, 1.);
   gl_Position = projectionMatrix * worldPosition;
 
-  vOrigin = eyePosition;
-  vDirection = position - vOrigin; 
+  vOrigin = vec3(inverse(modelMatrix) * vec4(cameraPos, 1.)).xyz;
+  vDirection = position - vOrigin;
 }
 `;
 
@@ -102,7 +100,7 @@ void main(){
   delta /= 100.; // steps
 
 	for (float t = bounds.x; t < bounds.y; t += delta) {
-    
+
     vec4 val = texture(map, p + vec3(.5));
     if(val.r > .5 ) {
       //color.rgb += (1. - color.a) * val * (.5 + p );
@@ -118,7 +116,7 @@ void main(){
 		if (color.a >= 0.95) {
 			break;
 		}
-  
+
     p += rayDir * delta;
   }
 
@@ -208,12 +206,13 @@ async function init() {
   texture.minFilter = LinearMipMapLinearFilter;
   texture.magFilter = LinearFilter;
   texture.generateMipmaps = true;
-  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  // texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
+  const geo = new BoxBufferGeometry(1, 1, 1);
   const mat = new RawShaderMaterial({
     uniforms: {
       map: { value: texture },
-      eyePosition: { value: new Vector3() },
+      cameraPos: { value: new Vector3() },
     },
     vertexShader,
     fragmentShader,
@@ -222,8 +221,16 @@ async function init() {
     transparent: true,
     //side: DoubleSide,
   });
-  mesh = new Mesh(new BoxBufferGeometry(1, 1, 1), mat);
-  scene.add(mesh);
+  for ( let i = 0; i < 10; i ++ ) {
+    mesh = new Mesh(geo, mat);
+    mesh.position.x = Math.random() * 4 - 2;
+    mesh.position.y = Math.random() * 4 - 2;
+    mesh.position.z = Math.random() * 4 - 2;
+    mesh.rotation.x = Math.random() * Math.PI * 2;
+    mesh.rotation.y = Math.random() * Math.PI * 2;
+    mesh.rotation.z = Math.random() * Math.PI * 2;
+    scene.add(mesh);
+  }
 
   camera.position.set(3, 3, 3);
   camera.lookAt(mesh);
@@ -247,10 +254,8 @@ const invCamera = new Matrix4();
 function render() {
   requestAnimationFrame(render);
 
-  invCamera.getInverse(mesh.matrixWorld);
-  mesh.material.uniforms.eyePosition.value
-    .copy(camera.position)
-    .applyMatrix4(invCamera);
+  mesh.material.uniforms.cameraPos.value
+    .copy(camera.position);
 
   renderer.render(scene, camera);
 }
