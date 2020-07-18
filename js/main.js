@@ -20,7 +20,7 @@ import {
   IcosahedronBufferGeometry,
   UnsignedByteType,
   Clock,
-  BackSide
+  BackSide,
 } from "../third_party/three.module.js";
 import { OrbitControls } from "../third_party/OrbitControls.js";
 import { FirstPersonControls } from "../third_party/FirstPersonControls.js";
@@ -38,7 +38,7 @@ document.body.append(renderer.domElement);
 
 const scene = new Scene();
 const camera = new PerspectiveCamera(75, 1, 0.1, 100);
-camera.position.set( 0, 0, 1 );
+camera.position.set(0, 0, 1);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.screenSpacePanning = true;
@@ -255,6 +255,27 @@ void main(){
   }
   */
 
+  #ifdef ACCUMULATE
+  vec4 ac = vec4(0.,0.,0.,0.);
+    
+  for (float t = bounds.x; t < bounds.y; t += delta) {
+    float d = sample1(p + .5);
+    float l = smoothstep(.3, .6, 1.-length(p));
+    d *=l;
+    d = smoothstep(.45, .55, d) / 50.;
+    vec3 col = normal(p + .5) * 0.5 + ( p * 2.0 + 0.25 );
+    ac.rgb += (1.0 - ac.a) * d * col;
+    ac.a += (1.0 - ac.a) * d;
+    if(ac.a>=.95){
+      break;
+    }
+    p += rayDir * delta;
+  }
+
+  color = ac;
+  return;
+ #endif
+
   for (float t = bounds.x; t < bounds.y; t += delta) {
     float d = sample1(p + .5);
     if ( d > 0.6 ) {
@@ -293,14 +314,14 @@ const normal = new Vector3();
 
 function perlinNormal(x, y, z) {
   const step = 0.001;
-  normal.x = perlin( x - step, y, z ) - perlin( x + step, y, z );
-  normal.y = perlin( x, y - step, z ) - perlin( x, y + step, z );
-  normal.z = perlin( x, y, z - step ) - perlin( x, y, z + step );
+  normal.x = perlin(x - step, y, z) - perlin(x + step, y, z);
+  normal.y = perlin(x, y - step, z) - perlin(x, y + step, z);
+  normal.z = perlin(x, y, z - step) - perlin(x, y, z + step);
   normal.normalize();
   return normal;
 }
 
-function generatePerlin(data,ox,oy,oz) {
+function generatePerlin(data, ox, oy, oz) {
   let ptr = 0;
   const s = 0.05;
 
@@ -368,11 +389,11 @@ async function init() {
       map: { value: texture },
       // normalMap: { value: texture2 },
       cameraPos: { value: new Vector3() },
-      time: { value: 0.0 }
+      time: { value: 0.0 },
     },
     vertexShader,
     fragmentShader,
-    side: BackSide
+    side: BackSide,
   });
 
   mesh = new Mesh(geo, mat);
@@ -436,7 +457,7 @@ function render() {
   mesh.material.uniforms.cameraPos.value.copy(camera.position);
   mesh.material.uniforms.time.value = time;
 
-  controls.update( clock.getDelta() ); // Hide this delta stuff
+  controls.update(clock.getDelta()); // Hide this delta stuff
   renderer.render(scene, camera);
 }
 
