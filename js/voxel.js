@@ -19,7 +19,7 @@ async function loadModel() {
   });
 }
 
-async function voxelise(size) {
+async function voxelise(data, size) {
   const obj = await loadModel();
   console.log("loaded");
 
@@ -184,7 +184,7 @@ async function voxelise(size) {
 
   console.log("expanding...");
   const depth = 1;
-  const data = new Float32Array(grid.length * depth);
+  // const data = new Float32Array(grid.length * depth);
   for (let j = 0; j < grid.length; j++) {
     if (grid[j].interior || grid[j].surface) {
       if (depth === 4) {
