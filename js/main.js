@@ -7,6 +7,7 @@ import {
   MeshNormalMaterial,
   DataTexture3D,
   RedFormat,
+  RGBFormat,
   RGBAFormat,
   HalfFloatType,
   FloatType,
@@ -160,6 +161,8 @@ const fragmentShader = `#version 300 es
 precision highp float;
 precision highp sampler3D;
 
+// #define WRITE_DEPTH
+
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 
@@ -170,6 +173,7 @@ in vec3 vDirection;
 out vec4 color;
 
 uniform sampler3D map;
+uniform sampler3D normalMap;
 uniform float time;
 
 vec2 hitBox(vec3 orig, vec3 dir) {
@@ -187,6 +191,10 @@ vec2 hitBox(vec3 orig, vec3 dir) {
 
 float sample1( vec3 p ) {
   return texture( map, p ).r;
+}
+
+vec3 sample2( vec3 p ) {
+  return texture( normalMap, p ).rgb;
 }
 
 /*
@@ -251,7 +259,12 @@ void main(){
     float d = sample1(p + .5);
     if ( d > 0.6 ) {
       // color.rgb = p * 2.0 + 0.5;
-      color.rgb = normal(p + .5);
+      color.rgb = normal(p + .5) * 0.5 + ( p * 2.0 + 0.25 );
+      #ifdef WRITE_DEPTH
+        vec4 depth = (projectionMatrix * modelViewMatrix * vec4(p , 1.));
+        gl_FragDepth = ((depth.z/depth.w)+1.)/2.;
+      #endif
+      // color.rgb += p * 0.01 + 0.01; // disable break
       color.a = 1.;
       break;
     }
@@ -268,19 +281,39 @@ const width = size;
 const height = size;
 const depth = size;
 const data = new Float32Array(width * height * depth);
+// const data2 = new Float32Array(width * height * depth * 3);
 
 let mesh;
+
+function perlin(x, y, z) {
+  return 0.5 + 0.5 * perlin3(x, y, z);
+}
+
+const normal = new Vector3();
+
+function perlinNormal(x, y, z) {
+  const step = 0.001;
+  normal.x = perlin( x - step, y, z ) - perlin( x + step, y, z );
+  normal.y = perlin( x, y - step, z ) - perlin( x, y + step, z );
+  normal.z = perlin( x, y, z - step ) - perlin( x, y, z + step );
+  normal.normalize();
+  return normal;
+}
 
 function generatePerlin(data,ox,oy,oz) {
   let ptr = 0;
   const s = 0.05;
 
-  const v = new Vector3();
-  const c = new Vector3(width, height, depth).multiplyScalar(0.5);
   for (let z = 0; z < depth; z++) {
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        data[ptr] = 0.5 + 0.5 * perlin3(ox + s * x, oy + s * y, oz + s * z);
+        data[ptr] = perlin(ox + s * x, oy + s * y, oz + s * z);
+        /*
+        perlinNormal(ox + s * x, oy + s * y, oz + s * z);
+        data2[ptr*3+0] = normal.x;
+        data2[ptr*3+1] = normal.y;
+        data2[ptr*3+2] = normal.z;
+        */
         ptr++;
       }
     }
@@ -321,29 +354,40 @@ async function init() {
   texture.magFilter = LinearFilter;
   texture.unpackAlignment = 1;
 
+  /*
+  const texture2 = new DataTexture3D(data2, width, height, depth);
+  texture2.format = RGBFormat;
+  texture2.type = FloatType;
+  texture2.minFilter = LinearFilter;
+  texture2.magFilter = LinearFilter;
+  */
+
   const geo = new BoxBufferGeometry(1, 1, 1);
   const mat = new RawShaderMaterial({
     uniforms: {
       map: { value: texture },
+      // normalMap: { value: texture2 },
       cameraPos: { value: new Vector3() },
-  time: { value: 0.0 }
+      time: { value: 0.0 }
     },
     vertexShader,
     fragmentShader,
-  side: BackSide
+    side: BackSide
   });
 
   mesh = new Mesh(geo, mat);
   scene.add(mesh);
 
+  /*
   const bbox = new Mesh(
     new BoxBufferGeometry(1, 1, 1),
     new MeshNormalMaterial({ wireframe: true })
   );
-  // scene.add(bbox);
+  scene.add(bbox);
+  */
 
   /*
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 50; i++) {
     mesh = new Mesh(geo, mat);
     mesh.position.x = Math.random() * 4 - 2;
     mesh.position.y = Math.random() * 4 - 2;
@@ -361,7 +405,7 @@ async function init() {
     bbox.position.copy(mesh.position);
     bbox.rotation.copy(mesh.rotation);
     bbox.scale.copy(mesh.scale);
-    scene.add(bbox);
+    // scene.add(bbox);
   }
   */
 
