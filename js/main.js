@@ -220,7 +220,28 @@ vec3 wn(vec3 p) {
 }
 */
 
+#define epsilon .0001
+
 vec3 normal( vec3 coord ) {
+
+  if(coord.x < epsilon){
+    return vec3(1.,0.,0.);
+  }
+  if(coord.x > 1.- epsilon){
+    return vec3(-1.,0.,0.);
+  }
+  if(coord.y < epsilon){
+    return vec3(0.,1.,0.);
+  }
+  if(coord.y > 1.- epsilon){
+    return vec3(0.,-1.,0.);
+  }
+  if(coord.z < epsilon){
+    return vec3(0.,0.,1.);
+  }
+  if(coord.z > 1.- epsilon){
+    return vec3(0.,0.,-1.);
+  }
 
   float step = 0.01;
   float x = sample1( coord + vec3( -step, 0.0, 0.0 ) ) - sample1( coord + vec3( +step, 0.0, 0.0 ) );
@@ -317,6 +338,7 @@ function perlinNormal(x, y, z) {
   normal.x = perlin(x - step, y, z) - perlin(x + step, y, z);
   normal.y = perlin(x, y - step, z) - perlin(x, y + step, z);
   normal.z = perlin(x, y, z - step) - perlin(x, y, z + step);
+
   normal.normalize();
   return normal;
 }
