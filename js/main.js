@@ -37,8 +37,8 @@ renderer.setClearColor(0, 0);
 document.body.append(renderer.domElement);
 
 const scene = new Scene();
-const camera = new PerspectiveCamera(75, 1, 0.1, 100);
-camera.position.set(0, 0, 1);
+const camera = new PerspectiveCamera(60, 1, 0.1, 100);
+camera.position.set(0, 0, 2);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.screenSpacePanning = true;
@@ -278,7 +278,7 @@ void main(){
 
   #ifdef ACCUMULATE
   vec4 ac = vec4(0.,0.,0.,0.);
-    
+
   for (float t = bounds.x; t < bounds.y; t += delta) {
     float d = sample1(p + .5);
     float l = smoothstep(.3, .6, 1.-length(p));
@@ -300,8 +300,9 @@ void main(){
   for (float t = bounds.x; t < bounds.y; t += delta) {
     float d = sample1(p + .5);
     if ( d > 0.6 ) {
+    // if ( sin( d * 30. ) > 0.7 ) {
       // color.rgb = p * 2.0 + 0.5;
-      color.rgb = normal(p + .5) * 0.5 + ( p * 2.0 + 0.25 );
+      color.rgb = normal(p + .5) * 0.5 + ( p * 1.5 + 0.25 );
       #ifdef WRITE_DEPTH
         vec4 depth = (projectionMatrix * modelViewMatrix * vec4(p , 1.));
         gl_FragDepth = ((depth.z/depth.w)+1.)/2.;
