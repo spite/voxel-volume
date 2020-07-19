@@ -162,6 +162,7 @@ precision highp float;
 precision highp sampler3D;
 
 // #define WRITE_DEPTH
+//#define ACCUMULATE
 
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
@@ -175,6 +176,10 @@ out vec4 color;
 uniform sampler3D map;
 uniform sampler3D normalMap;
 uniform float time;
+
+uniform float cut;
+uniform float range;
+uniform float opacity;
 
 vec2 hitBox(vec3 orig, vec3 dir) {
   const vec3 box_min = vec3(-.5);
@@ -282,8 +287,8 @@ void main(){
   for (float t = bounds.x; t < bounds.y; t += delta) {
     float d = sample1(p + .5);
     float l = smoothstep(.3, .6, 1.-length(p));
-    d *=l;
-    d = smoothstep(.45, .55, d) / 50.;
+    //d *=l;
+    d = smoothstep(cut - range, cut + range, d) * opacity;
     vec3 col = normal(p + .5) * 0.5 + ( p * 2.0 + 0.25 );
     ac.rgb += (1.0 - ac.a) * d * col;
     ac.a += (1.0 - ac.a) * d;
@@ -299,7 +304,7 @@ void main(){
 
   for (float t = bounds.x; t < bounds.y; t += delta) {
     float d = sample1(p + .5);
-    if ( d > 0.6 ) {
+    if ( d > cut ) {
     // if ( sin( d * 30. ) > 0.7 ) {
       // color.rgb = p * 2.0 + 0.5;
       color.rgb = normal(p + .5) * 0.5 + ( p * 1.5 + 0.25 );
@@ -413,6 +418,9 @@ async function init() {
       // normalMap: { value: texture2 },
       cameraPos: { value: new Vector3() },
       time: { value: 0.0 },
+      cut: { value: 0.6 },
+      range: { value: 0.01 },
+      opacity: { value: 1 },
     },
     vertexShader,
     fragmentShader,
