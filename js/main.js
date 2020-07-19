@@ -311,42 +311,42 @@ void main(){
   */
 
   if(accumulate) {
-  vec4 ac = vec4(0.,0.,0.,0.);
+    vec4 ac = vec4(0.,0.,0.,0.);
 
-  for (float t = bounds.x; t < bounds.y; t += delta) {
-    float d = sample1(p + .5);
-    float l = smoothstep(.3, .6, 1.-length(p));
-    //d *=l;
-    d = smoothstep(cut - range, cut + range, d) * opacity;
-    vec3 col = normal(p + .5) * 0.5 + ( p * 2.0 + 0.25 );
-    ac.rgb += (1.0 - ac.a) * d * col;
-    ac.a += (1.0 - ac.a) * d;
-    if(ac.a>=.95){
-      break;
+    for (float t = bounds.x; t < bounds.y; t += delta) {
+      float d = sample1(p + .5);
+      //float l = smoothstep(.3, .6, 1.-length(p));
+      //d *=l;
+      d = smoothstep(cut - range, cut + range, d) * opacity;
+      vec3 col = normal(p + .5) * 0.5 + ( p * 2.0 + 0.25 );
+      ac.rgb += (1.0 - ac.a) * d * col;
+      ac.a += (1.0 - ac.a) * d;
+      if(ac.a>=.95){
+        break;
+      }
+      p += rayDir * delta;
     }
-    p += rayDir * delta;
-  }
 
-  color = ac;
-} else {
-  for (float t = bounds.x; t < bounds.y; t += delta) {
-    float d = sample1(p + .5);
-    if ( d > cut ) {
-    // if ( sin( d * 30. ) > 0.7 ) {
-      // color.rgb = p * 2.0 + 0.5;
-      color.rgb = normal(p + .5) * 0.5 + ( p * 1.5 + 0.25 );
-      #ifdef WRITE_DEPTH
-        vec4 depth = (projectionMatrix * modelViewMatrix * vec4(p , 1.));
-        gl_FragDepth = ((depth.z/depth.w)+1.)/2.;
-      #endif
-      // color.rgb += p * 0.01 + 0.01; // disable break
-      color.a = 1.;
-      break;
+    color = ac;
+  } else {
+    for (float t = bounds.x; t < bounds.y; t += delta) {
+      float d = sample1(p + .5);
+      if ( d > cut ) {
+      // if ( sin( d * 30. ) > 0.7 ) {
+        // color.rgb = p * 2.0 + 0.5;
+        color.rgb = normal(p + .5) * 0.5 + ( p * 1.5 + 0.25 );
+        #ifdef WRITE_DEPTH
+          vec4 depth = (projectionMatrix * modelViewMatrix * vec4(p , 1.));
+          gl_FragDepth = ((depth.z/depth.w)+1.)/2.;
+        #endif
+        // color.rgb += p * 0.01 + 0.01; // disable break
+        color.a = 1.;
+        break;
+      }
+      p += rayDir * delta;
     }
-    p += rayDir * delta;
   }
-}
-if ( color.a == 0. ) discard;
+  if ( color.a == 0. ) discard;
  
 }
 `;
