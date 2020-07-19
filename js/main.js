@@ -27,6 +27,7 @@ import { FirstPersonControls } from "../third_party/FirstPersonControls.js";
 import { perlin3 } from "../third_party/perlin.js";
 import { voxelise } from "./voxel.js";
 import * as dat from "../third_party/dat.gui.module.js";
+import { loadRaw } from "./data.js";
 
 const gui = new dat.GUI();
 
@@ -318,6 +319,7 @@ void main(){
       //float l = smoothstep(.3, .6, 1.-length(p));
       //d *=l;
       d = smoothstep(cut - range, cut + range, d) * opacity;
+      //vec3 col = ( p * 2.0 + 0.25 );
       vec3 col = normal(p + .5) * 0.5 + ( p * 2.0 + 0.25 );
       ac.rgb += (1.0 - ac.a) * d * col;
       ac.a += (1.0 - ac.a) * d;
@@ -421,9 +423,11 @@ function generateSphere(data) {
 let mat;
 
 async function init() {
+  //await loadRaw("aneurism_256x256x256_uint8.raw", data, width, height, depth);
+
   // await voxelise(data, size);
   generatePerlin(data, 0, 0, 0);
-  // generateSphere();
+  //generateSphere();
 
   const texture = new DataTexture3D(data, width, height, depth);
   texture.format = RedFormat;
