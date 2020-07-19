@@ -26,6 +26,33 @@ import { OrbitControls } from "../third_party/OrbitControls.js";
 import { FirstPersonControls } from "../third_party/FirstPersonControls.js";
 import { perlin3 } from "../third_party/perlin.js";
 import { voxelise } from "./voxel.js";
+import * as dat from "../third_party/dat.gui.module.js";
+
+const gui = new dat.GUI();
+
+const params = new (function () {
+  this.cut = 0.6;
+  this.range = 0.1;
+  this.opacity = 1;
+  this.steps = 100;
+  this.accumulate = false;
+})();
+
+gui
+  .add(params, "cut", 0, 1, 0.01)
+  .onChange((v) => (mat.uniforms.cut.value = v));
+gui
+  .add(params, "range", 0, 1, 0.01)
+  .onChange((v) => (mat.uniforms.range.value = v));
+gui
+  .add(params, "opacity", 0, 1, 0.01)
+  .onChange((v) => (mat.uniforms.opacity.value = v));
+gui
+  .add(params, "steps", 0, 200)
+  .onChange((v) => (mat.uniforms.steps.value = v));
+gui
+  .add(params, "accumulate")
+  .onChange((v) => (mat.uniforms.accumulate.value = v));
 
 const renderer = new WebGLRenderer({
   preserveDrawingBuffer: false,
@@ -109,7 +136,7 @@ void main(){
   vec3 p = vOrigin + bounds.x * rayDir;
   vec3 inc = 1.0 / abs(rayDir);
   float delta = min(inc.x, min(inc.y, inc.z));
-  delta /= 100.; // steps
+  delta /= steps
 
   for (float t = bounds.x; t < bounds.y; t += delta) {
 
@@ -180,6 +207,8 @@ uniform float time;
 uniform float cut;
 uniform float range;
 uniform float opacity;
+uniform float steps;
+uniform bool accumulate;
 
 vec2 hitBox(vec3 orig, vec3 dir) {
   const vec3 box_min = vec3(-.5);
@@ -267,7 +296,7 @@ void main(){
   vec3 p = vOrigin + bounds.x * rayDir;
   vec3 inc = 1.0 / abs(rayDir);
   float delta = min(inc.x, min(inc.y, inc.z));
-  delta /= 200.; // steps
+  delta /= steps;
 
   /*
   for (float t = bounds.x; t < bounds.y; t += delta) {
@@ -281,7 +310,7 @@ void main(){
   }
   */
 
-  #ifdef ACCUMULATE
+  if(accumulate) {
   vec4 ac = vec4(0.,0.,0.,0.);
 
   for (float t = bounds.x; t < bounds.y; t += delta) {
@@ -299,9 +328,7 @@ void main(){
   }
 
   color = ac;
-  return;
- #endif
-
+} else {
   for (float t = bounds.x; t < bounds.y; t += delta) {
     float d = sample1(p + .5);
     if ( d > cut ) {
@@ -318,9 +345,9 @@ void main(){
     }
     p += rayDir * delta;
   }
-
-  if ( color.a == 0. ) discard;
-
+}
+if ( color.a == 0. ) discard;
+ 
 }
 `;
 
@@ -391,6 +418,8 @@ function generateSphere(data) {
   }
 }
 
+let mat;
+
 async function init() {
   // await voxelise(data, size);
   generatePerlin(data, 0, 0, 0);
@@ -412,7 +441,7 @@ async function init() {
   */
 
   const geo = new BoxBufferGeometry(1, 1, 1);
-  const mat = new RawShaderMaterial({
+  mat = new RawShaderMaterial({
     uniforms: {
       map: { value: texture },
       // normalMap: { value: texture2 },
@@ -421,6 +450,8 @@ async function init() {
       cut: { value: 0.6 },
       range: { value: 0.01 },
       opacity: { value: 1 },
+      steps: { value: 200 },
+      accumulate: { value: false },
     },
     vertexShader,
     fragmentShader,
